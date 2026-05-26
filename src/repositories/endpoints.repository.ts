@@ -1,13 +1,14 @@
 import pool from '../db/client';
-import { QueryResult } from 'pg';
+import { QueryResult,PoolClient } from 'pg';
 import { Endpoint,EndpointSubscription } from '../types/endpoints.types'
 
 export const createEndpoint = async (
+    client: PoolClient,
     user_id: string,
     url: string,
     secret: string
 ): Promise<Endpoint> => {
-  const result: QueryResult<Endpoint> = await pool.query(
+  const result: QueryResult<Endpoint> = await client.query(
     `INSERT INTO endpoints (user_id, url, secret)
      VALUES ($1, $2, $3)
      RETURNING id, user_id, url, secret, is_active, created_at`,
@@ -18,10 +19,11 @@ export const createEndpoint = async (
 };
 
 export const createEndpointSubscription = async (
+    client: PoolClient,
     endpoint_id: string,
     event_type: string
 ): Promise<EndpointSubscription> => {
-    const result: QueryResult<EndpointSubscription> = await pool.query(
+    const result: QueryResult<EndpointSubscription> = await client.query(
     `INSERT INTO endpoint_subscriptions (endpoint_id, event_type)
      VALUES ($1, $2)
      RETURNING id, endpoint_id, event_type, created_at`,
@@ -59,3 +61,5 @@ export const deactivateEndpoint = async (
   );
   return result.rows[0] || null;
 };
+
+
