@@ -19,19 +19,19 @@ export const createEndpoint = async (
 };
 
 export const createEndpointSubscription = async (
-    client: PoolClient,
-    endpoint_id: string,
-    event_type: string
+  endpointId: string,
+  eventType: string,
+  client?: PoolClient
 ): Promise<EndpointSubscription> => {
-    const result: QueryResult<EndpointSubscription> = await client.query(
+  const db = client || pool;
+  const result = await db.query(
     `INSERT INTO endpoint_subscriptions (endpoint_id, event_type)
      VALUES ($1, $2)
-     RETURNING id, endpoint_id, event_type, created_at`,
-    [endpoint_id,event_type]
+     RETURNING *`,
+    [endpointId, eventType]
   );
-
   return result.rows[0];
-}
+};
 
 export const findByUrlAndUserId = async (
   url: string,
@@ -56,6 +56,7 @@ export const deactivateEndpoint = async (
      SET is_active = false 
      WHERE id = $1 
      AND user_id = $2
+     AND is_active = true
      RETURNING *`,
     [id, userId]
   );
@@ -63,3 +64,45 @@ export const deactivateEndpoint = async (
 };
 
 
+export const findByEndpointIdAndUserId = async (
+  endpoint_id: string,
+  userId: string
+): Promise<Endpoint | null> => {
+  const result = await pool.query(
+    `SELECT * FROM endpoints 
+     WHERE id = $1 
+     AND user_id = $2
+     AND is_active = true`,
+    [endpoint_id, userId]
+  );
+  return result.rows[0] || null;
+};
+
+
+export const findByEventType = async (
+  event_type: string,
+  endpoint_id: string
+): Promise<EndpointSubscription | null> => {
+  const result = await pool.query(
+    `SELECT * FROM endpoint_subscriptions 
+     WHERE endpoint_id = $1 
+     AND event_type = $2`,
+    [endpoint_id, event_type]
+  );
+  return result.rows[0] || null;
+};
+
+
+export const removeSubscription = async (
+  endpointId: string,
+  eventType: string
+): Promise<EndpointSubscription | null> => {
+  const result = await pool.query(
+    `DELETE FROM endpoint_subscriptions
+     WHERE endpoint_id = $1
+     AND event_type = $2
+     RETURNING *`,
+    [endpointId, eventType]
+  );
+  return result.rows[0] || null;
+};
