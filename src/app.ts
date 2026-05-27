@@ -2,6 +2,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import { connectDB } from './db/client';
 import { config } from './config/index';
 import authRoutes from './api/routes/auth.routes';
+import endpointRoutes from './api/routes/endpoints.routes';
 
 const app: Application = express();
 
@@ -10,6 +11,8 @@ app.use(express.json());
 
 
 app.use('/auth', authRoutes);
+
+app.use('/endpoints', endpointRoutes);
 
 
 app.use((req: Request, res: Response) => {
