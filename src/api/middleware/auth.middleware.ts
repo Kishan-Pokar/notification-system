@@ -1,11 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { config } from '../../config/index';
-import { findById } from '../../repositories/user.repository';
-
-interface JwtPayload {
-  userId: string;
-}
+import { findByApiKey } from '../../repositories/user.repository';
 
 export const authMiddleware = async (
   req: Request,
@@ -13,21 +7,17 @@ export const authMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
+    const apiKey = req.headers['x-api-key'] as string;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ message: 'No token provided' });
+    if (!apiKey) {
+      res.status(401).json({ message: 'API key required' });
       return;
     }
 
-    const token = authHeader.split(' ')[1];
-
-    const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
-
-    const user = await findById(decoded.userId);
+    const user = await findByApiKey(apiKey);
 
     if (!user) {
-      res.status(401).json({ message: 'User no longer exists' });
+      res.status(401).json({ message: 'Invalid API key' });
       return;
     }
 
@@ -35,7 +25,6 @@ export const authMiddleware = async (
     next();
 
   } catch (error) {
-    res.status(401).json({ message: 'Invalid or expired token' });
-    return;
+    res.status(401).json({ message: 'Unauthorized' });
   }
 };

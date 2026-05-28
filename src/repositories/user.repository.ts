@@ -28,6 +28,18 @@ export const findByEmail = async (email: string): Promise<User | null> => {
   return result.rows[0] || null;
 };
 
+export const findByApiKey = async (
+  apiKey: string
+): Promise<Omit<User, 'password'> | null> => {
+  const result = await pool.query(
+    `SELECT id, name, email, api_key, created_at 
+     FROM users 
+     WHERE api_key = $1`,
+    [apiKey]
+  );
+  return result.rows[0] || null;
+};
+
 export const findById = async (id: string): Promise<Omit<User, 'password'> | null> => {
   const result = await pool.query(
     `SELECT id, name, email, api_key, created_at 

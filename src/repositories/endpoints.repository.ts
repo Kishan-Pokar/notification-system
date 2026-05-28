@@ -80,8 +80,8 @@ export const findByEndpointIdAndUserId = async (
 
 
 export const findByEventType = async (
-  event_type: string,
-  endpoint_id: string
+  endpoint_id: string,
+  event_type: string
 ): Promise<EndpointSubscription | null> => {
   const result = await pool.query(
     `SELECT * FROM endpoint_subscriptions 
