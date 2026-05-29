@@ -104,3 +104,13 @@ export const findEventById = async (
   );
   return result.rows[0] || null;
 };
+
+export const findEventStatusById = async (
+  eventId: string
+): Promise<{ status: string } | null> => {
+  const result = await pool.query(
+    `SELECT status FROM events WHERE id = $1`,
+    [eventId]
+  );
+  return result.rows[0] || null;
+};

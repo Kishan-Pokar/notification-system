@@ -6,4 +6,6 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL!,
   nodeEnv: process.env.NODE_ENV,
   jwtSecret: process.env.JWT_SECRET!,
+  redisHost: process.env.REDIS_HOST! || 'localhost',
+  redisPort: Number(process.env.REDIS_PORT) || 6379,
 }
