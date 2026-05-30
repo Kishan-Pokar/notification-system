@@ -1,3 +1,4 @@
+![Tests](https://github.com/Kishan-Pokar/notification-system/actions/workflows/test.yml/badge.svg)
 # Webhook Delivery System
 
 A production-grade event-driven webhook delivery system built with Node.js, TypeScript, BullMQ, Redis, and PostgreSQL. Instead of manually pushing HTTP requests to multiple endpoints every time something happens, you send one event to this system and it handles guaranteed delivery automatically — with retries, failure tracking, and a full audit trail.
