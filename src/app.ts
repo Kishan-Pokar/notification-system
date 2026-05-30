@@ -6,6 +6,7 @@ import endpointRoutes from './api/routes/endpoints.routes';
 import eventRoutes from './api/routes/events.routes';
 import deliveriesRoutes from './api/routes/deliveries.routes';
 import './workers/webhook.worker';
+import { AppError } from './utils/errors';
 
 const app: Application = express();
 
@@ -26,9 +27,14 @@ app.use((req: Request, res: Response) => {
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.message);
-  res.status(500).json({ message: err.message || 'Internal server error' });
-});
 
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({ message: err.message });
+    return;
+  }
+
+  res.status(500).json({ message: 'Internal server error' });
+});
 
 const start = async (): Promise<void> => {
   await connectDB();

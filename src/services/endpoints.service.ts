@@ -2,6 +2,7 @@ import { createEndpoint, createEndpointSubscription, findByUrlAndUserId, deactiv
 import { Endpoint, EndpointSubscription, CreateEndpointInput } from "../types/endpoints.types";
 import crypto from 'crypto';
 import pool from '../db/client';
+import { NotFoundError, ConflictError, BadRequestError } from '../utils/errors';
 
 export const registerEndpoint = async (
     input: CreateEndpointInput,
@@ -10,11 +11,11 @@ export const registerEndpoint = async (
 
     const uniqueEventTypes = new Set(input.event_types);
     if (uniqueEventTypes.size !== input.event_types.length) {
-        throw new Error('Duplicate event types in request');
+        throw new BadRequestError('Duplicate event types in request');
     }
 
     const existing = await findByUrlAndUserId(input.url, user_id);
-    if (existing) throw new Error('Endpoint already registered');
+    if (existing) throw new ConflictError('Endpoint already registered');
 
     const secret = crypto.randomBytes(32).toString('hex');
 
@@ -50,7 +51,7 @@ export const deleteEndpoint = async (
 ): Promise<Endpoint> => {
     const endpoint = await deactivateEndpoint(endpoint_id, user_id);
 
-    if (!endpoint) throw new Error('Endpoint not found or unauthorized');
+    if (!endpoint) throw new NotFoundError('Endpoint not found or unauthorized');
 
     return endpoint;
 };
@@ -63,11 +64,11 @@ export const addEventType = async (
 ): Promise<EndpointSubscription> => {
 
     const endpoint = await findByEndpointIdAndUserId(endpointId, userId);
-    if (!endpoint) throw new Error('Endpoint not found or unauthorized');
-    if (!endpoint.is_active) throw new Error('Endpoint is deactivated');
+    if (!endpoint) throw new NotFoundError('Endpoint not found or unauthorized');
+    if (!endpoint.is_active) throw new BadRequestError('Endpoint is deactivated');
 
     const existing = await findByEventType(endpointId, eventType);
-    if (existing) throw new Error('Event type already subscribed for this endpoint');
+    if (existing) throw new ConflictError('Event type already subscribed for this endpoint');
 
     return await createEndpointSubscription(endpointId, eventType);
 };
@@ -78,11 +79,11 @@ export const removeEventType = async (
     userId: string
 ): Promise<EndpointSubscription> => {
     const endpoint = await findByEndpointIdAndUserId(endpointId, userId);
-    if (!endpoint) throw new Error('Endpoint not found or unauthorized');
-    if (!endpoint.is_active) throw new Error('Endpoint is deactivated');
+    if (!endpoint) throw new NotFoundError('Endpoint not found or unauthorized');
+    if (!endpoint.is_active) throw new BadRequestError('Endpoint is deactivated');
 
     const subscription = await removeSubscription(endpointId, eventType);
-    if (!subscription) throw new Error('Subscription not found');
+    if (!subscription) throw new NotFoundError('Subscription not found');
 
     return subscription;
 };
