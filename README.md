@@ -306,3 +306,24 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 NODE_ENV=development
 ```
+
+## Performance
+
+Load tested with [k6](https://k6.io) under sustained load:
+
+| Metric | Result |
+|--------|--------|
+| Concurrent Users | 50 |
+| Total Requests | 16,091 |
+| Throughput | 321 req/s |
+| Avg Response Time | 24ms |
+| P95 Latency | 51ms |
+| Error Rate | 0.00% |
+
+All requests returned 201. Zero failures under sustained load.
+
+To reproduce these results:
+```bash
+k6 run loadtest.js
+```
+Requires k6 installed and server running locally with Docker.

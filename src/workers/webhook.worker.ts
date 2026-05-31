@@ -16,6 +16,13 @@ export const webhookWorker = new Worker<JobPayload>(
   async (job: Job<JobPayload>) => {
     const { url, secret, payload, event_id, endpoint_id } = job.data;
 
+    // verify event still exists before attempting delivery
+    const event = await findEventStatusById(event_id);
+    if (!event) {
+      console.error(`Event ${event_id} no longer exists. Discarding job.`);
+      return; // return without throwing — don't retry a deleted event
+    }
+
     const body = JSON.stringify(payload);
     const signature = signPayload(body, secret);
     const start = Date.now();
@@ -28,7 +35,7 @@ export const webhookWorker = new Worker<JobPayload>(
           'X-Webhook-Signature': signature,
         },
         body,
-        signal: AbortSignal.timeout(10000), // 10 second timeout
+        signal: AbortSignal.timeout(10000),
       });
 
       const duration = Date.now() - start;
@@ -50,14 +57,12 @@ export const webhookWorker = new Worker<JobPayload>(
         return;
       }
 
-      // non 2xx response — throw so BullMQ retries
       throw new Error(`HTTP ${response.status}`);
 
     } catch (err: unknown) {
       const duration = Date.now() - start;
       const error = err instanceof Error ? err : new Error('Unknown error');
 
-      // dont log delivery attempt twice for non-2xx — already logged above
       if (!error.message.startsWith('HTTP')) {
         await createDeliveryAttempt({
           event_id,
@@ -71,7 +76,7 @@ export const webhookWorker = new Worker<JobPayload>(
         });
       }
 
-      throw error; // rethrow so BullMQ retries
+      throw error;
     }
   },
   {
@@ -82,28 +87,34 @@ export const webhookWorker = new Worker<JobPayload>(
   }
 );
 
-// fires when all retries are exhausted
 webhookWorker.on('failed', async (job: Job<JobPayload> | undefined, err: Error) => {
   if (!job) return;
 
-  if (job.attemptsMade >= (job.opts.attempts ?? 5)) {
-    const { event_id, endpoint_id } = job.data;
+  try {
+    if (job.attemptsMade >= (job.opts.attempts ?? 5)) {
+      const { event_id, endpoint_id } = job.data;
 
-    await createDeliveryAttempt({
-      event_id,
-      endpoint_id,
-      attempt_number: job.attemptsMade,
-      status: 'exhausted',
-      http_status_code: null,
-      response_body: null,
-      error_message: err.message,
-      duration_ms: null,
-    });
+      await createDeliveryAttempt({
+        event_id,
+        endpoint_id,
+        attempt_number: job.attemptsMade,
+        status: 'exhausted',
+        http_status_code: null,
+        response_body: null,
+        error_message: err.message,
+        duration_ms: null,
+      });
 
-    // only mark failed if not already delivered
-    const eventStatus = await findEventStatusById(event_id);
-    if (eventStatus && eventStatus.status === 'pending') {
-      await updateEventStatus(event_id, 'failed');
+      const eventStatus = await findEventStatusById(event_id);
+      if (eventStatus && eventStatus.status === 'pending') {
+        await updateEventStatus(event_id, 'failed');
+      }
     }
+  } catch (handlerError) {
+    console.error('Worker failed handler error:', handlerError);
   }
+});
+
+webhookWorker.on('error', (err) => {
+  console.error('Worker error:', err.message);
 });
